@@ -207,8 +207,8 @@ class ResNetMulti(nn.Module):
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=1, dilation=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=1, dilation=4)
-        self.layer5 = self._make_pred_layer(Classifier_Module, 1024, [6, 12, 18, 24], [6, 12, 18, 24], num_classes, norm_style, droprate, use_se)
-        self.layer6 = self._make_pred_layer(Classifier_Module, 1024 + 2048, [6, 12, 18, 24], [6, 12, 18, 24], num_classes, norm_style, droprate, use_se)
+        self.layer5 = self._make_pred_layer(Classifier_Module, 1024, [6, 12, 18, 24], [6, 12, 18, 24], num_classes, norm_style, droprate, use_se) # aspp classifier with rates of 5, 12, 18, 24
+        self.layer6 = self._make_pred_layer(Classifier_Module, 1024 + 2048, [6, 12, 18, 24], [6, 12, 18, 24], num_classes, norm_style, droprate, use_se) # also aspp
 
         #for m in self.modules():
         #    if isinstance(m, nn.Conv2d):
@@ -249,10 +249,10 @@ class ResNetMulti(nn.Module):
         x = self.layer2(x)
 
         x = self.layer3(x)
-        x1 = self.layer5(x)
+        x1 = self.layer5(x) # aux head
 
         x2 = torch.cat((self.layer4(x),x), 1)
-        x2 = self.layer6(x2)
+        x2 = self.layer6(x2) # main head
 
         return x1, x2
 
@@ -277,7 +277,7 @@ class ResNetMulti(nn.Module):
                 jj = 0
                 for k in j.parameters():
                     jj += 1
-                    if k.requires_grad:
+                    if k.requires_grad: # only include unfrozen params
                         yield k
 
     def get_10x_lr_params(self):
@@ -288,10 +288,11 @@ class ResNetMulti(nn.Module):
         b = []
         b.append(self.layer5.parameters())
         b.append(self.layer6.parameters())
-
+        
         for j in range(len(b)):
             for i in b[j]:
-                yield i
+                if i.requires_grad: # only include unfrozen params
+                    yield i
 
     def optim_parameters(self, args):
         return [{'params': self.get_1x_lr_params_NOscale(), 'lr': args.learning_rate},
