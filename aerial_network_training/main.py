@@ -94,6 +94,10 @@ def get_argparser():
     
     parser.add_argument("--loss_type", type=str, default='cross_entropy',
                         choices=['cross_entropy', 'focal_loss'], help="loss type (default: False)")
+    parser.add_argument("--focal_alpha", type=float, default=1,
+                        help="alpha value for focal loss (default: 2)")
+    parser.add_argument("--focal_gamma", type=float, default=2,
+                        help="gamma value for focal loss (default: 1)")
     parser.add_argument("--gpu_id", type=str, default='0',
                         help="GPU ID")
     parser.add_argument("--weight_decay", type=float, default=1e-4,
@@ -188,8 +192,10 @@ def validate(opts, model, loader, device, metrics, ret_samples_ids=None):
             
             images = images.to(device, dtype=torch.float32)
             labels = labels.to(device, dtype=torch.long)
-
-            outputs = model(images)
+            
+            _, outputs = model(images) # aux, final classifier outputs
+            # upsample to original image size
+            outputs = nn.Upsample(size=list(labels.shape)[1:], mode='bilinear', align_corners=True)(outputs)
             preds = outputs.detach().max(dim=1)[1].cpu().numpy()
             targets = labels.cpu().numpy()
 
@@ -226,11 +232,13 @@ def validate(opts, model, loader, device, metrics, ret_samples_ids=None):
         score = metrics.get_results()
     return score, ret_samples
 
-def restore_model(model, opts, device, verbose=False):
+def restore_model(model, opts, device, verbose=False, from_pretrained=False):
     if opts.restore_from[:4] == 'http' :
         saved_state_dict = model_zoo.load_url(opts.restore_from)
-    else:
+    elif from_pretrained: # when loading weights from MemReg pre-trained
         saved_state_dict = torch.load(opts.restore_from, map_location=torch.device(device))
+    else: # when
+        saved_state_dict = torch.load(opts.restore_from, map_location=torch.device(device))["model_state"]
     
     new_params = model.state_dict().copy()
     for i in saved_state_dict:
@@ -252,10 +260,6 @@ def restore_model(model, opts, device, verbose=False):
 
 def main():
     opts = get_argparser().parse_args()
-#     if opts.dataset.lower() == 'voc':
-#         opts.num_classes = 21
-#     elif opts.dataset.lower() == 'cityscapes':
-#         opts.num_classes = 19
 
     # Setup visualization
     vis = Visualizer(port=opts.vis_port,
@@ -287,25 +291,6 @@ def main():
     # Set up metrics
     metrics = StreamSegMetrics(opts.num_classes)
 
-#     Set up model
-#     model_map = {
-#         'deeplabv3_resnet50': network.deeplabv3_resnet50,
-#         'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
-#         'deeplabv3_resnet101': network.deeplabv3_resnet101,
-#         'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101,
-#         'deeplabv3_mobilenet': network.deeplabv3_mobilenet,
-#         'deeplabv3plus_mobilenet': network.deeplabv3plus_mobilenet
-#     }
-
-#     model = model_map[opts.model](num_classes=opts.num_classes, output_stride=opts.output_stride)
-    
-#     model = network.deeplabv2(num_classes = opts.num_classes,
-#                               use_se = opts.use_se, #
-#                               train_bn = opts.train_bn, #
-#                               norm_style = opts.norm_style, # gn
-#                               droprate = opts.droprate, # .1
-#                               restore_from = opts.restore_from) # default RESTORE_FROM
-
     # Load model
     model = DeeplabMulti(num_classes = opts.num_classes, # TODO change to opts.num_classes
                               use_se = opts.use_se, 
@@ -317,22 +302,6 @@ def main():
     new_params = restore_model(model, opts, device)
     model.load_state_dict(new_params)
     
-    # Replace classifier layer with opts.num_new_classes
-    # Unfreeze last layer, then a few more stages
-    
-#     if opts.separable_conv and 'plus' in opts.model:
-#         network.convert_to_separable_conv(model.classifier)
-#     utils.set_bn_momentum(model.backbone, momentum=0.01)
-    
-#     # Restore model
-#     if opts.ckpt is not None and os.path.isfile(opts.ckpt):
-#         checkpoint = torch.load(opts.ckpt, map_location=torch.device('cpu'))
-#         model.load_state_dict(checkpoint["model_state"])
-#         print("Model restored from %s" % opts.ckpt)
-#         del checkpoint # free memory
-#     else:
-#         print("[!] Retrain")
-        
     def freeze_model(model, unfreeze_to, bn_unfreeze_affine=False, bn_use_batch_stats=True):
         """Freeze model weights.
         
@@ -345,7 +314,7 @@ def main():
         if unfreeze_to == "head":
             segments_to_unfreeze = np.array(["layer5.head.1", "layer6.head.1"])
         elif unfreeze_to == "ASPP":
-            segments_to_unfreeze = np.array(["layer5", "layer6"])
+            segments_to_unfreeze = np.array(["layer6"])
         else: # unfreeze everything
             segments_to_unfreeze = np.array(["layer"+str(i) for i in range(1,7)])
         
@@ -382,25 +351,7 @@ def main():
     freeze_model(model, unfreeze_to=opts.unfreeze_to)
 
     # Set up optimizer with unfrozen layers
-#     encoder_params = list(model.backbone.parameters()) + \
-#                      list(model.classifier.aspp.convs.parameters())
-                     
-#     decoder_proj_params = list(model.classifier.classifier.parameters()) + \
-#                             list(model.classifier.project.parameters()) + \
-#                             list(model.classifier.aspp.project.parameters())
-    
-#     encoder_params = filter(lambda p: p.requires_grad, encoder_params)
-#     decoder_proj_params = filter(lambda p: p.requires_grad, decoder_proj_params)
-#     params = [
-#         {'params': encoder_params, 'lr': 0.1*opts.learning_rate},
-#         {'params': decoder_proj_params, 'lr': opts.learning_rate},
-#     ]
-
     optimizer = torch.optim.SGD(params=model.optim_parameters(opts), lr=opts.learning_rate, momentum=0.9, weight_decay=opts.weight_decay)
-    
-    # MemReg repo optimizer
-#     self.gen_opt = optim.SGD(self.G.optim_parameters(args),
-#                           lr=args.learning_rate, momentum=args.momentum, nesterov=True, weight_decay=args.weight_decay)
     
     if opts.lr_policy=='poly':
         scheduler = utils.PolyLR(optimizer, opts.total_itrs, power=0.9)
@@ -409,22 +360,23 @@ def main():
 
     # Set up criterion
     if opts.loss_type == 'focal_loss':
-        criterion = utils.FocalLoss(ignore_index=0, size_average=True)
+        criterion = utils.FocalLoss(ignore_index=0, alpha = opts.focal_alpha, gamma = opts.focal_gamma, size_average=True)
     elif opts.loss_type == 'cross_entropy':
         criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
     
     def save_ckpt(path):
         """ save current model
         """
-        torch.save({
-            "cur_itrs": cur_itrs,
-            "model_state": model.module.state_dict(),
-            "optimizer_state": optimizer.state_dict(),
-            "scheduler_state": scheduler.state_dict(),
-            "best_score": best_score,
-        }, path, _use_new_zipfile_serialization=False)
+#         torch.save({
+#             "cur_itrs": cur_itrs,
+#             "model_state": model.module.state_dict(),
+#             "optimizer_state": optimizer.state_dict(),
+#             "scheduler_state": scheduler.state_dict(),
+#             "best_score": best_score,
+#         }, path, _use_new_zipfile_serialization=False)
+        torch.save(model.state_dict(), path)
         print("Model saved as %s" % path)
-
+    
 #     # Restore training checkpoint
     utils.mkdir('checkpoints/%s_%s' % (opts.goal_name, opts.exp_name))
     best_score = 0.0
@@ -440,7 +392,7 @@ def main():
 #         del checkpoint  # free memory
 
     # Parallelize model for training
-    model = nn.DataParallel(model)
+#     model = nn.DataParallel(model)
     model.to(device)
 
     #==========   Train Loop   ==========#
@@ -468,7 +420,10 @@ def main():
             labels = labels.to(device, dtype=torch.long)
 
             optimizer.zero_grad()
-            outputs = model(images)
+            _, outputs = model(images) # aux, final classifier outputs
+            # upsample to original image size
+            outputs = nn.Upsample(size=list(labels.shape)[1:], mode='bilinear', align_corners=True)(outputs)
+#             print(aux_outputs.shape, outputs.shape)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -485,8 +440,8 @@ def main():
                 interval_loss = 0.0
 
             if (cur_itrs) % opts.val_interval == 0:
-                save_ckpt('checkpoints/%s_%s/latest_%s_%s_os%d.pth' %
-                    (opts.goal_name, opts.exp_name, opts.model, opts.dataset, opts.output_stride))
+                save_ckpt('checkpoints/%s_%s/latest_%d_%d.pth' %
+                    (opts.goal_name, opts.exp_name, opts.learning_rate, opts.batch_size))
                 print("validation...")
                 model.eval()
                 val_score, ret_samples = validate(
@@ -494,9 +449,9 @@ def main():
                 print(metrics.to_str(val_score))
                 if val_score['Mean IoU'] > best_score:  # save best model
                     best_score = val_score['Mean IoU']
-                    save_ckpt('checkpoints/%s_%s/best_%s_%s_os%d.pth' %
-                       (opts.goal_name, opts.exp_name, opts.model, opts.dataset,opts.output_stride))
-
+                    save_ckpt('checkpoints/%s_%s/best_%d_%d.pth' %
+                        (opts.goal_name, opts.exp_name, opts.learning_rate, opts.batch_size))
+                
                 if vis is not None:  # visualize validation score and samples
                     vis.vis_scalar("[Val] Overall Acc", cur_itrs, val_score['Overall Acc'])
                     vis.vis_scalar("[Val] Mean IoU", cur_itrs, val_score['Mean IoU'])
