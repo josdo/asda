@@ -5,6 +5,6 @@
 *.yaml
 
 log/
-data/
+
 result/
 snapshots/
