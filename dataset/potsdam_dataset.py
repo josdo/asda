@@ -4,10 +4,11 @@ from collections import namedtuple
 
 import torch
 import torch.utils.data as data
+import torchvision
 
 import numpy as np
-# from PIL import Image
-from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+from PIL import Image
+#from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 class Potsdam(data.Dataset):
     """Potsdam ISPRS Dataset <http://www2.isprs.org/commissions/comm3/wg4/semantic-labeling.html>.
@@ -30,19 +31,19 @@ class Potsdam(data.Dataset):
     id_to_color = np.array([c.color for c in classes])
     color_to_id = {c.color:c.id for c in classes}
     
-    def __init__(self, root, list_IDs, transform=None):
+    def __init__(self, root, list_path, transform=None):
         self.root = os.path.expanduser(root)
         self.imgs_dir = os.path.join(self.root, 'imgs')
         self.targets_dir = os.path.join(self.root, 'masks')
 
-        self.list_IDs = list_IDs # same ID for input and label
+        self.list_IDs = [i_id.strip() for i_id in open(list_path)] # same ID for input and label
         self.transform = transform
         
         self.images = []
         self.targets = []
         for ID in self.list_IDs:
-            X = np.load(os.path.join(self.imgs_dir, ID + '.npy'))
-            y = np.load(os.path.join(self.targets_dir, ID + '.npy'))
+            X = np.array(Image.open(os.path.join(self.imgs_dir, ID)))
+            y = np.array(Image.open(os.path.join(self.targets_dir, ID)))
 
             self.images.append(X)
             self.targets.append(y)
@@ -93,3 +94,16 @@ class Potsdam(data.Dataset):
        
     def __len__(self):
         return len(self.list_IDs)
+
+if __name__ == '__main__':
+    dst = Potsdam('./data/potsdam', './dataset/potsdam_list/train.txt')
+    trainloader = data.DataLoader(dst, batch_size=4)
+    for i, data in enumerate(trainloader):
+        imgs, _ = data
+        if i == 0:
+            img = torchvision.utils.make_grid(imgs).numpy()
+            img = np.transpose(img, (1, 2, 0))
+            img = img[:, :, ::-1]
+            img = Image.fromarray(np.uint8(img))
+            img.save('Potsdam_Demo.jpg')
+        break
