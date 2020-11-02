@@ -1,6 +1,7 @@
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
+from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 import torch
 import numpy as np
 
@@ -125,6 +126,17 @@ class Bottleneck(nn.Module):
 
         return out
 
+class ModuleWrapperIgnores2ndArg(nn.Module):
+    # Wrapper for checkpointing the ASPP classifier module
+    # https://discuss.pytorch.org/t/checkpoint-with-no-grad-requiring-inputs-problem/19117/10
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
+
+    def forward(self,x, dummy_arg=None):
+        assert dummy_arg is not None
+        x = self.module(x)
+        return x
 
 class Classifier_Module(nn.Module):
     def __init__(self, inplanes, dilation_series, padding_series, num_classes, norm_style = 'bn', droprate = 0.1, use_se = False):
@@ -157,6 +169,12 @@ class Classifier_Module(nn.Module):
 
         self.head = nn.Sequential(*[nn.Dropout2d(droprate),
             nn.Conv2d(512, num_classes, kernel_size=1, padding=0, dilation=1, bias=False) ])
+        
+        # Dummy tensors for sequential checkpointing to work
+        # https://discuss.pytorch.org/t/checkpoint-with-no-grad-requiring-inputs-problem/19117/10
+        self.dummy_tensor = torch.ones(1, dtype=torch.float32, requires_grad=True)
+        self.wrapper = ModuleWrapperIgnores2ndArg
+        self.nchunks = 3
 
         ##########init#######
         for m in self.conv2d_list:
@@ -181,15 +199,23 @@ class Classifier_Module(nn.Module):
         for m in self.head:
             if isinstance(m, nn.Conv2d):
                 m.weight.data.normal_(0, 0.001)
-
+    
+    def ckpt(self, seq_layers, x):
+        # Forgets forward pass ASPP values to reduce memory overhead and avoid OOM during training.
+        # Requires recomputing backward pass.
+        return checkpoint(self.wrapper(seq_layers), x, self.dummy_tensor)
+    
     def forward(self, x):
-        out = self.conv2d_list[0](x)
+        out = self.ckpt(self.conv2d_list[0], x)
         for i in range(len(self.conv2d_list) - 1):
-            out = torch.cat( (out, self.conv2d_list[i+1](x)), 1)
-        out = self.bottleneck(out)
-        out = self.head(out)
+#             out = torch.cat( (out, self.conv2d_list[i+1](x)), 1)
+            out = torch.cat( (out, self.ckpt(self.conv2d_list[i+1], x)), 1)
+#         out = self.bottleneck(out)
+#         out = self.head(out)
+        out = self.ckpt(self.bottleneck, out)
+        out = self.ckpt(self.head, out)
         return out
-
+    
 
 class ResNetMulti(nn.Module):
     def __init__(self, block, layers, num_classes, use_se = False, train_bn = False, norm_style = 'bn', droprate = 0.1):

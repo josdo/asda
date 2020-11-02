@@ -54,7 +54,7 @@ def get_argparser():
 #                         help="apply separable conv to decoder and aspp")
     parser.add_argument("--output_stride", type=int, default=16, choices=[8, 16])
     parser.add_argument("--unfreeze_to", type=str, default='decoder',
-                        choices=['head', 'ASPP', 'all'], 
+                        choices=['head', 'aspp_main', 'last_conv_aspp_both', 'all'], 
                         help='unfreeze to which model segment of DeepLabV3+')
     parser.add_argument("--use-se", action='store_true', help="use se block.")
     parser.add_argument("--train_bn", action='store_true', help="train batch normalization.")
@@ -302,7 +302,7 @@ def main():
     new_params = restore_model(model, opts, device)
     model.load_state_dict(new_params)
     
-    def freeze_model(model, unfreeze_to, bn_unfreeze_affine=False, bn_use_batch_stats=True):
+    def freeze_model(model, unfreeze_to, bn_unfreeze_affine=False, bn_use_batch_stats=True, verbose=True):
         """Freeze model weights.
         
         The bn arguments change batchnorm behavior in the freezed part of the model.
@@ -313,8 +313,10 @@ def main():
         """
         if unfreeze_to == "head":
             segments_to_unfreeze = np.array(["layer5.head.1", "layer6.head.1"])
-        elif unfreeze_to == "ASPP":
+        elif unfreeze_to == "aspp_main":
             segments_to_unfreeze = np.array(["layer6"])
+        elif unfreeze_to == "last_conv_aspp_both":
+            segments_to_unfreeze = np.array(["layer4", "layer5", "layer6"])
         else: # unfreeze everything
             segments_to_unfreeze = np.array(["layer"+str(i) for i in range(1,7)])
         
@@ -336,19 +338,20 @@ def main():
                 m.train(to_unfreeze)
                 
         # Print unfreeze outcomes
-        print("Unfreezing down to", unfreeze_to)
-        param_ct = 0
-        for name, m in model.named_modules():
-            to_unfreeze = False
-            for p in m.parameters(recurse=False):
-                if p.requires_grad:
-                    param_ct += np.prod(p.size())
-                    to_unfreeze = True
-            if to_unfreeze:
-                print("    ", name)
-        print("Numbers of parameters: ", param_ct)
+        if verbose:
+            print("Unfreezing down to", unfreeze_to)
+            param_ct = 0
+            for name, m in model.named_modules():
+                to_unfreeze = False
+                for p in m.parameters(recurse=False):
+                    if p.requires_grad:
+                        param_ct += np.prod(p.size())
+                        to_unfreeze = True
+                if to_unfreeze:
+                    print("    ", name)
+            print("Numbers of parameters: ", param_ct)
 
-    freeze_model(model, unfreeze_to=opts.unfreeze_to)
+    freeze_model(model, unfreeze_to=opts.unfreeze_to, verbose=False)
 
     # Set up optimizer with unfrozen layers
     optimizer = torch.optim.SGD(params=model.optim_parameters(opts), lr=opts.learning_rate, momentum=0.9, weight_decay=opts.weight_decay)
@@ -421,6 +424,7 @@ def main():
 
             optimizer.zero_grad()
             _, outputs = model(images) # aux, final classifier outputs
+#             _, outputs = torch.utils.checkpoint.checkpoint(model, (images)) # aux, final classifier outputs
             # upsample to original image size
             outputs = nn.Upsample(size=list(labels.shape)[1:], mode='bilinear', align_corners=True)(outputs)
 #             print(aux_outputs.shape, outputs.shape)
@@ -440,8 +444,8 @@ def main():
                 interval_loss = 0.0
 
             if (cur_itrs) % opts.val_interval == 0:
-                save_ckpt('checkpoints/%s_%s/latest_%d_%d.pth' %
-                    (opts.goal_name, opts.exp_name, opts.learning_rate, opts.batch_size))
+                save_ckpt('checkpoints/%s_%s/latest_%.5f_%d.pth' %
+                    (opts.goal_name, opts.exp_name, opts.learning_rate, opts.gamma))
                 print("validation...")
                 model.eval()
                 val_score, ret_samples = validate(
@@ -449,8 +453,10 @@ def main():
                 print(metrics.to_str(val_score))
                 if val_score['Mean IoU'] > best_score:  # save best model
                     best_score = val_score['Mean IoU']
-                    save_ckpt('checkpoints/%s_%s/best_%d_%d.pth' %
-                        (opts.goal_name, opts.exp_name, opts.learning_rate, opts.batch_size))
+                    save_ckpt('checkpoints/%s_%s/latest_%.5f_%d.pth' %
+                        (opts.goal_name, opts.exp_name, opts.learning_rate, opts.gamma))
+#                     save_ckpt('checkpoints/%s_%s/best_%d_%d.pth' %
+#                         (opts.goal_name, opts.exp_name, opts.learning_rate, opts.batch_size))
                 
                 if vis is not None:  # visualize validation score and samples
                     vis.vis_scalar("[Val] Overall Acc", cur_itrs, val_score['Overall Acc'])
