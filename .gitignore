@@ -5,6 +5,7 @@
 *.yaml
 
 log/
-
+data/potsdam/
+data/dstl/
 result/
 snapshots/
