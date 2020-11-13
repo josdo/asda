@@ -41,12 +41,12 @@ class Potsdam(data.Dataset):
         
         self.files = []
         for ID in self.list_IDs:
-            X = np.array(Image.open(os.path.join(self.imgs_dir, ID)).convert('RGB'))
-            y = np.array(Image.open(os.path.join(self.targets_dir, ID)).convert('RGB'))
+            # X = np.array(Image.open(os.path.join(self.imgs_dir, ID)).convert('RGB'))
+            # y = np.array(Image.open(os.path.join(self.targets_dir, ID)).convert('RGB'))
 
             self.files.append({
-                "img": X,
-                "label": y,
+                "img": os.path.join(self.imgs_dir, ID), # X,
+                "label": os.path.join(self.targets_dir, ID), # y
                 "name": ID,
             })
         
@@ -73,8 +73,8 @@ class Potsdam(data.Dataset):
 
     def __getitem__(self, index):
         datafiles = self.files[index]
-        X = datafiles["img"]
-        y = datafiles["label"]
+        X = np.array(Image.open(datafiles["img"]).convert('RGB'))
+        y = np.array(Image.open(datafiles["label"]).convert('RGB'))
         name = datafiles["name"]
         #X, y = self.images[index], self.targets[index]
         
