@@ -81,15 +81,18 @@ class AD_Trainer(nn.Module):
                 if args.restore_from[:4] == 'http' :
                     if i_parts[1] !='fc' and i_parts[1] !='layer5':
                         new_params['.'.join(i_parts[1:])] = saved_state_dict[i]
-                        print('%s is loaded from pre-trained weight.\n'%i_parts[1:])
+                        if args.verbose_model_loading: 
+                            print('%s is loaded from pre-trained weight.\n'%i_parts[1:])
                 else:
                     #new_params['.'.join(i_parts[1:])] = saved_state_dict[i]
                     if i_parts[0] =='module':
                         new_params['.'.join(i_parts[1:])] = saved_state_dict[i]
-                        print('%s is loaded from pre-trained weight.\n'%i_parts[1:])
+                        if args.verbose_model_loading: 
+                            print('%s is loaded from pre-trained weight.\n'%i_parts[1:])
                     else:
                         new_params['.'.join(i_parts[0:])] = saved_state_dict[i]
-                        print('%s is loaded from pre-trained weight.\n'%i_parts[0:])
+                        if args.verbose_model_loading: 
+                            print('%s is loaded from pre-trained weight.\n'%i_parts[0:])
         self.G.load_state_dict(new_params)
 
         self.D1 = MsImageDis(input_dim = args.num_classes).cuda() 

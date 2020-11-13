@@ -22,6 +22,8 @@ from utils.loss import CrossEntropy2d
 from utils.tool import adjust_learning_rate, adjust_learning_rate_D, Timer 
 from dataset.gta5_dataset import GTA5DataSet
 from dataset.cityscapes_dataset import cityscapesDataSet
+from dataset.potsdam_dataset import Potsdam
+from dataset.dstl_dataset import Dstl
 
 IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
 
@@ -171,6 +173,7 @@ def get_arguments():
                         help="Path to the directory of log.")
     parser.add_argument("--set", type=str, default=SET,
                         help="choose adaptation set.")
+    parser.add_argument("--verbose_model_loading", action='store_true', help = 'print out all model layers')
     return parser.parse_args()
 
 
@@ -186,7 +189,7 @@ with open('%s/opts.yaml'%args.snapshot_dir, 'w') as fp:
 
 def main():
     """Create the model and start the training."""
-
+    
     w, h = map(int, args.input_size.split(','))
     args.input_size = (w, h)
 
@@ -218,25 +221,40 @@ def main():
     else:
         Trainer = AD_Trainer(args)
 
-    print(Trainer)
+    if args.verbose_model_loading:
+        print(Trainer)
 
+#     trainloader = data.DataLoader(
+#         GTA5DataSet(args.data_dir, args.data_list, max_iters=args.num_steps * args.iter_size * args.batch_size,
+#                     resize_size=args.input_size,
+#                     crop_size=args.crop_size,
+#                     scale=True, mirror=True, mean=IMG_MEAN, autoaug = args.autoaug),
+#         batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+    
     trainloader = data.DataLoader(
-        GTA5DataSet(args.data_dir, args.data_list, max_iters=args.num_steps * args.iter_size * args.batch_size,
-                    resize_size=args.input_size,
-                    crop_size=args.crop_size,
-                    scale=True, mirror=True, mean=IMG_MEAN, autoaug = args.autoaug),
-        batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+        Potsdam(args.data_dir, args.data_list, 
+#                 max_iters=args.num_steps * args.iter_size * args.batch_size,
+#                 resize_size=args.input_size,
+#                 crop_size=args.crop_size,
+#                 scale=True, mirror=True, mean=IMG_MEAN, autoaug = args.autoaug
+               ),
+        batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, 
+        pin_memory=True, drop_last=True)
 
     trainloader_iter = enumerate(trainloader)
 
-    targetloader = data.DataLoader(cityscapesDataSet(args.data_dir_target, args.data_list_target,
-                                                     max_iters=args.num_steps * args.iter_size * args.batch_size,
-                                                     resize_size=args.input_size_target,
-                                                     crop_size=args.crop_size,
-                                                     scale=False, mirror=args.random_mirror, mean=IMG_MEAN,
-                                                     set=args.set, autoaug = args.autoaug_target),
-                                   batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
-                                   pin_memory=True, drop_last=True)
+#     targetloader = data.DataLoader(cityscapesDataSet(args.data_dir_target, args.data_list_target,
+#                                                      max_iters=args.num_steps * args.iter_size * args.batch_size,
+#                                                      resize_size=args.input_size_target,
+#                                                      crop_size=args.crop_size,
+#                                                      scale=False, mirror=args.random_mirror, mean=IMG_MEAN,
+#                                                      set=args.set, autoaug = args.autoaug_target),
+#                                    batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
+#                                    pin_memory=True, drop_last=True)
+    targetloader = data.DataLoader(
+        Dstl(args.data_dir_target, args.data_list_target),
+        batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, 
+        pin_memory=True, drop_last=True)
 
 
     targetloader_iter = enumerate(targetloader)

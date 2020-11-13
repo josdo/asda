@@ -292,7 +292,7 @@ def main():
     metrics = StreamSegMetrics(opts.num_classes)
 
     # Load model
-    model = DeeplabMulti(num_classes = opts.num_classes, # TODO change to opts.num_classes
+    model = DeeplabMulti(num_classes = opts.num_classes, 
                               use_se = opts.use_se, 
                               train_bn = opts.train_bn, 
                               norm_style = opts.norm_style,
@@ -444,8 +444,8 @@ def main():
                 interval_loss = 0.0
 
             if (cur_itrs) % opts.val_interval == 0:
-                save_ckpt('checkpoints/%s_%s/latest_%.5f_%d.pth' %
-                    (opts.goal_name, opts.exp_name, opts.learning_rate, opts.gamma))
+                save_ckpt('checkpoints/%s_%s/latest_lr%.5f_gam%d_drop%.2f.pth' %
+                    (opts.goal_name, opts.exp_name, opts.learning_rate, opts.focal_gamma, opts.droprate))
                 print("validation...")
                 model.eval()
                 val_score, ret_samples = validate(
@@ -453,8 +453,8 @@ def main():
                 print(metrics.to_str(val_score))
                 if val_score['Mean IoU'] > best_score:  # save best model
                     best_score = val_score['Mean IoU']
-                    save_ckpt('checkpoints/%s_%s/latest_%.5f_%d.pth' %
-                        (opts.goal_name, opts.exp_name, opts.learning_rate, opts.gamma))
+                    save_ckpt('checkpoints/%s_%s/latest_lr%.5f_gam%d_drop%.2f.pth' %
+                        (opts.goal_name, opts.exp_name, opts.learning_rate, opts.focal_gamma, opts.droprate))
 #                     save_ckpt('checkpoints/%s_%s/best_%d_%d.pth' %
 #                         (opts.goal_name, opts.exp_name, opts.learning_rate, opts.batch_size))
                 
