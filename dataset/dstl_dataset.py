@@ -10,6 +10,9 @@ import numpy as np
 from PIL import Image
 # from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD  = [0.229, 0.224, 0.225]
+
 class Dstl(data.Dataset):
     """Dstl Satellite Imagery Dataset <https://www.kaggle.com/c/dstl-satellite-imagery-feature-detection/data>.
     
@@ -38,6 +41,10 @@ class Dstl(data.Dataset):
 
         self.list_IDs = [i_id.strip() for i_id in open(list_path)] # same ID for input and label
         self.transform = transform
+
+        # ImageNet mean and std
+        self.mean = IMAGENET_MEAN
+        self.std = IMAGENET_STD
         
         self.files = []
         for ID in self.list_IDs:
@@ -82,8 +89,8 @@ class Dstl(data.Dataset):
 
     def __getitem__(self, index):
         datafiles = self.files[index]
-        X = np.array(Image.open(datafiles["img"]).convert('RGB'))
-        y = np.array(Image.open(datafiles["label"]).convert('RGB'))
+        X = np.array(Image.open(datafiles["img"]).convert('RGB'), dtype=np.float32)
+        y = np.array(Image.open(datafiles["label"]).convert('RGB'), dtype=np.uint8)
         name = datafiles["name"]
         #X, y = self.images[index], self.targets[index]
         
@@ -95,9 +102,9 @@ class Dstl(data.Dataset):
             
         # Normalize image with ImageNet mean / std
         X = X / 255
-        mean = [0.485, 0.456, 0.406]
-        std = [0.229, 0.224, 0.225]
-        X = (X - mean) / std
+        #mean = [0.485, 0.456, 0.406]
+        #std = [0.229, 0.224, 0.225]
+        X = (X - self.mean) / self.std
         
         # Expect some pixels now negative
 #         print("Mean and standard deviation are:", X.mean(), X.std())
