@@ -39,14 +39,25 @@ class Dstl(data.Dataset):
         self.list_IDs = [i_id.strip() for i_id in open(list_path)] # same ID for input and label
         self.transform = transform
         
-        self.images = []
-        self.targets = []
+        self.files = []
         for ID in self.list_IDs:
-            X = np.array(Image.open(os.path.join(self.imgs_dir, ID)))
-            y = np.array(Image.open(os.path.join(self.targets_dir, ID)))
+            X = np.array(Image.open(os.path.join(self.imgs_dir, ID)).convert('RGB'))
+            y = np.array(Image.open(os.path.join(self.targets_dir, ID)).convert('RGB'))
 
-            self.images.append(X)
-            self.targets.append(y)
+            self.files.append({
+                "img": X,
+                "label": y,
+                "name": ID,
+            })
+        
+        #self.images = []
+        #self.targets = []
+        #for ID in self.list_IDs:
+        #    X = np.array(Image.open(os.path.join(self.imgs_dir, ID)))
+        #    y = np.array(Image.open(os.path.join(self.targets_dir, ID)))
+
+        #    self.images.append(X)
+        #    self.targets.append(y)
         
     @classmethod
     def encode_target(cls, target):
@@ -70,13 +81,17 @@ class Dstl(data.Dataset):
         return dec
 
     def __getitem__(self, index):
-        X, y = self.images[index], self.targets[index]
+        datafiles = self.files[index]
+        X = datafiles["img"]
+        y = datafiles["label"]
+        name = datafiles["name"]
+        #X, y = self.images[index], self.targets[index]
         
         # Augment data
-        if self.transform:
-            segmap = SegmentationMapsOnImage(y, shape=y.shape)
-            X, segmap = self.transform(image=X, segmentation_maps=segmap)
-            y = segmap.get_arr()
+        #if self.transform:
+        #    segmap = SegmentationMapsOnImage(y, shape=y.shape)
+        #    X, segmap = self.transform(image=X, segmentation_maps=segmap)
+        #    y = segmap.get_arr()
             
         # Normalize image with ImageNet mean / std
         X = X / 255
@@ -87,10 +102,11 @@ class Dstl(data.Dataset):
         # Expect some pixels now negative
 #         print("Mean and standard deviation are:", X.mean(), X.std())
         
-        # Switch HWC images to CHW pytorch order
-        X = X.transpose((2, 0, 1))
+        size = X.shape
+        X = X[:, :, ::-1]  # change to BGR
+        X = X.transpose((2, 0, 1))  # Switch HWC images to CHW pytorch order
         
-        return X, y
+        return X.copy(), y.copy(), np.array(size), name
        
     def __len__(self):
         return len(self.list_IDs)
