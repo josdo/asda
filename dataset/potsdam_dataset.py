@@ -97,7 +97,7 @@ class Potsdam(data.Dataset):
         X = X[:, :, ::-1]  # change to BGR
         X = X.transpose((2, 0, 1))  # Switch HWC images to CHW pytorch order
         
-        return X.copy(), y.copy(), np.array(size), name
+        return X, y, np.array(size), name
        
     def __len__(self):
         return len(self.list_IDs)
