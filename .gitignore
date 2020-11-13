@@ -9,4 +9,6 @@ data/potsdam/
 data/dstl/
 result/
 snapshots/
-aerial_network_training/
+aerial_network_training/checkpoints/
+aerial_network_training/data/
+aerial_network_training/pretrained_weights/
