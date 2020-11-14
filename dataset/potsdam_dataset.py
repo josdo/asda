@@ -99,7 +99,7 @@ class Potsdam(data.Dataset):
 #         print("Mean and standard deviation are:", X.mean(), X.std())
         
         size = X.shape
-        X = X[:, :, ::-1]  # change to BGR
+        X = X[:, :, ::-1] - np.zeros_like(X)  # change to BGR
         X = X.transpose((2, 0, 1))  # Switch HWC images to CHW pytorch order
         
         return X, y, np.array(size), name
