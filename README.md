@@ -4,4 +4,6 @@ Using adversarial learning and memory regularization to adapt an aerial segmenta
 
 To enable Visdom for training the aerial segmentation network, enable port forwarding by appending to the SSH login `-- -L 7000:localhost:7000`, then locally opening `localhost:7000`. (You can choose a port besides 7000 as well.)
 
+To enable port forwarding for tensorboard, append `-- -L 6006:localhost:6006` to the SSH login.
+
 Adapted from the official implementation of "Unsupervised Scene Adaptation with Memory Regularization in vivo" (IJCAI 2020, IJCV 2020). https://github.com/layumi/Seg-Uncertainty
