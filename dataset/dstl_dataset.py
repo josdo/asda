@@ -52,8 +52,8 @@ class Dstl(data.Dataset):
             # y = np.array(Image.open(os.path.join(self.targets_dir, ID)).convert('RGB'))
 
             self.files.append({
-                "img": os.path.join(self.imgs_dir, ID), # X,
-                "label": os.path.join(self.targets_dir, ID), # y
+                "img": os.path.join(self.imgs_dir, ID + '.png'), # X,
+                "label": os.path.join(self.targets_dir, ID + '.npy'), # y
                 "name": ID,
             })
         
@@ -90,7 +90,9 @@ class Dstl(data.Dataset):
     def __getitem__(self, index):
         datafiles = self.files[index]
         X = np.array(Image.open(datafiles["img"]).convert('RGB'), dtype=np.float32)
-        y = np.array(Image.open(datafiles["label"]).convert('RGB'), dtype=np.uint8)
+        y = np.load(datafiles["label"])
+        print(y.shape)
+        # y = np.array(Image.open(datafiles["label"]).convert('RGB'), dtype=np.uint8)
         name = datafiles["name"]
         #X, y = self.images[index], self.targets[index]
         

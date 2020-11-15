@@ -189,7 +189,7 @@ class AD_Trainer(nn.Module):
             loss = loss_seg2 + self.lambda_seg * loss_seg1
 
             # target
-            pred_target1, pred_target2 = self.G(images_t)
+            pred_target1, pred_target2 = self.G(images_t) # aux, main
             pred_target1 = self.interp_target(pred_target1)
             pred_target2 = self.interp_target(pred_target2)
 

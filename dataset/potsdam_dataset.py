@@ -52,24 +52,29 @@ class Potsdam(data.Dataset):
             # y = np.array(Image.open(os.path.join(self.targets_dir, ID)).convert('RGB'))
 
             self.files.append({
-                "img": os.path.join(self.imgs_dir, ID), # X,
-                "label": os.path.join(self.targets_dir, ID), # y
+                "img": os.path.join(self.imgs_dir, ID + '.png'), # X,
+                "label": os.path.join(self.targets_dir, ID + '.npy'), # y
                 "name": ID,
             })
         
     @classmethod
     def encode_target(cls, target):
         # expects target mask to be (H, W, C)
-        enc = np.zeros(target.shape[:2], dtype=np.int8)
-        for i, row in enumerate(target):
-            for j, color in enumerate(row):
-                try: # look up id
-                    ID = cls.color_to_id[tuple(color)]
-                except: # catch occasional invalid color value
-                    inval_idx = [np.all(a) for a in zip(color!=0, color!=255)]
-                    color[inval_idx] = 255
-                    ID = cls.color_to_id[tuple(color)]
-                enc[i,j] = ID
+        target = (np.around(target / 255) * 255).astype(np.uint8)  # round colors
+        enc = np.zeros(target.shape[:2])
+        for potsdam_class in cls.classes:
+            label = potsdam_class.id
+            color = np.asarray(potsdam_class.color)
+            enc += (target == color).all(axis=2) * label
+        #for i, row in enumerate(target):
+        #    for j, color in enumerate(row):
+        #        try: # look up id
+        #            ID = cls.color_to_id[tuple(color)]
+        #        except: # catch occasional invalid color value
+        #            inval_idx = [np.all(a) for a in zip(color!=0, color!=255)]
+        #            color[inval_idx] = 255
+        #            ID = cls.color_to_id[tuple(color)]
+        #        enc[i,j] = ID
         return enc.astype(np.int32)
 #         return np.array([[cls.color_to_id[tuple(color)] for color in row] for row in target])
 
@@ -81,7 +86,8 @@ class Potsdam(data.Dataset):
     def __getitem__(self, index):
         datafiles = self.files[index]
         X = np.array(Image.open(datafiles["img"]).convert('RGB'), dtype=np.float32)
-        y = np.array(Image.open(datafiles["label"]).convert('RGB'), dtype=np.uint8)
+        y = np.load(datafiles["label"])
+        # y = np.array(Image.open(datafiles["label"]).convert('RGB'), dtype=np.uint8)
         name = datafiles["name"]
         #X, y = self.images[index], self.targets[index]
         

@@ -40,7 +40,7 @@ def get_argparser():
     # Datset Options
     parser.add_argument("--data_root", type=str, default='../data',
                         help="path to Dataset")
-    parser.add_argument("--dataset", type=str, default='voc',
+    parser.add_argument("--dataset", type=str, default='potsdam',
                         choices=['potsdam', 'cityscapes'], help='Name of dataset')
     parser.add_argument("--num_classes", type=int, default=None,
                         help="num classes (default: None)")
@@ -143,8 +143,8 @@ def get_dataset(opts):
     if opts.dataset == 'potsdam':
         # Augmentation (normalizing happens in the dataset class)
         train_transform = iaa.Sequential([
-            # Random crop
-            iaa.Crop(percent = (0, opts.crop_percent)),
+#             # Random crop
+#             iaa.Crop(percent = (0, opts.crop_percent)),
             # Color jitter
             iaa.MultiplyBrightness((0.5, 1.5)),
             iaa.GammaContrast((0.5, 2.0)),
