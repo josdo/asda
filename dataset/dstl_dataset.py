@@ -91,7 +91,6 @@ class Dstl(data.Dataset):
         datafiles = self.files[index]
         X = np.array(Image.open(datafiles["img"]).convert('RGB'), dtype=np.float32)
         y = np.load(datafiles["label"])
-        print(y.shape)
         # y = np.array(Image.open(datafiles["label"]).convert('RGB'), dtype=np.uint8)
         name = datafiles["name"]
         #X, y = self.images[index], self.targets[index]

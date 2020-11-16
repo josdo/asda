@@ -28,9 +28,9 @@ torch.backends.cudnn.benchmark=True
 #IMG_MEAN = np.array((104.00698793,116.66876762,122.67891434), dtype=np.float32)
 #IMG_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32) # ImageNet mean
 
-DATA_DIRECTORY = './data/Dstl/data'
+DATA_DIRECTORY = './data/dstl/'
 DATA_LIST_PATH = './dataset/dstl_list/val.txt'
-SAVE_PATH = './result/dstl'
+SAVE_PATH = './result/dstl/'
 
 IGNORE_LABEL = 255
 NUM_CLASSES = 6
@@ -161,14 +161,14 @@ def main():
     testloader = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(512, 1024), resize_size=(1024, 512), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
                                     batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
 
-    scale = 1.25
+    #scale = 1.25
     testloader2 = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(round(512*scale), round(1024*scale) ), resize_size=( round(1024*scale), round(512*scale)), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
                                     batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
-    scale = 0.9
-    testloader3 = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(round(512*scale), round(1024*scale) ), resize_size=( round(1024*scale), round(512*scale)), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
-                                    batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
+    #scale = 0.9
+    #testloader3 = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(round(512*scale), round(1024*scale) ), resize_size=( round(1024*scale), round(512*scale)), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
+    #                                batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
 
-
+    # TODO remove this cropping thing
     if version.parse(torch.__version__) >= version.parse('0.4.0'):
         interp = nn.Upsample(size=(1024, 2048), mode='bilinear', align_corners=True)
     else:
@@ -178,14 +178,15 @@ def main():
     log_sm = torch.nn.LogSoftmax(dim = 1)
     kl_distance = nn.KLDivLoss( reduction = 'none')
 
-    for index, img_data in enumerate(zip(testloader, testloader2, testloader3) ):
-        batch, batch2, batch3 = img_data
+    for index, img_data in enumerate(zip(testloader, testloader2)): #enumerate(zip(testloader, testloader2, testloader3) ):
+        #batch, batch2, batch3 = img_data
+        batch, batch2 = img_data
         image, _, _, name = batch
         image2, _, _, name2 = batch2
         #image3, _, _, name3 = batch3
 
-        inputs = image.cuda()
-        inputs2 = image2.cuda()
+        inputs = image.float().cuda()
+        inputs2 = image2.float().cuda()
         #inputs3 = Variable(image3).cuda()
         print('\r>>>>Extracting feature...%03d/%03d'%(index*batchsize, NUM_STEPS), end='')
         if args.model == 'DeepLab':
@@ -239,7 +240,7 @@ def main():
             output_iterator.append(output_batch[i,:,:])
             heatmap_iterator.append(heatmap_batch[i,:,:]/np.max(heatmap_batch[i,:,:]))
             scoremap_iterator.append(1-scoremap_batch[i,:,:]/np.max(scoremap_batch[i,:,:]))
-            name_tmp = name[i].split('/')[-1]
+            name_tmp = name[i].split('/')[-1] + '.png'
             name[i] = '%s/%s' % (args.save, name_tmp)
         with Pool(4) as p:
             p.map(save, zip(output_iterator, name) )
@@ -256,4 +257,4 @@ if __name__ == '__main__':
     with torch.no_grad():
         save_path = main()
     print('Time used: {} sec'.format(time.time()-tt))
-    os.system('python compute_iou.py ./data/Dstl/data %s'%save_path)
+    os.system('python compute_iou.py ./data/dstl/ %s'%save_path)
