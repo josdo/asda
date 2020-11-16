@@ -265,6 +265,7 @@ def main():
         if not os.path.exists(args.log_dir):
             os.makedirs(args.log_dir)
 
+        print("Tensorboard is logging to", args.log_dir)
         writer = SummaryWriter(args.log_dir)
 
     for i_iter in range(args.num_steps):
@@ -329,7 +330,7 @@ def main():
                 'val_loss': val_loss,
             }
 
-            if i_iter % 100 == 0:
+            if i_iter % 10 == 0: # if i_iter % 100 == 0:
                 for key, val in scalar_info.items():
                     writer.add_scalar(key, val, i_iter)
 
@@ -342,16 +343,16 @@ def main():
 
         if i_iter >= args.num_steps_stop - 1:
             print('save model ...')
-            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '.pth'))
-            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D1.pth'))
-            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D2.pth'))
+            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'dstl_' + str(args.num_steps_stop) + '.pth'))
+            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'dstl_' + str(args.num_steps_stop) + '_D1.pth'))
+            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'dstl_' + str(args.num_steps_stop) + '_D2.pth'))
             break
 
         if i_iter % args.save_pred_every == 0 and i_iter != 0:
             print('taking snapshot ...')
-            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '.pth'))
-            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D1.pth'))
-            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D2.pth'))
+            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'dstl_' + str(i_iter) + '.pth'))
+            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'dstl_' + str(i_iter) + '_D1.pth'))
+            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'dstl_' + str(i_iter) + '_D2.pth'))
 
     if args.tensorboard:
         writer.close()

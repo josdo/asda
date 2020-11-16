@@ -17,6 +17,13 @@ try:
 except ImportError:
     print('This is not an error. If you want to use low precision, i.e., fp16, please install the apex with cuda support (https://github.com/NVIDIA/apex) and update pytorch to 1.0')
 
+#MONeT
+#try:
+#    from monet.cvxpy_solver import Solution
+#    from monet.monet_wrapper import MONeTWrapper
+#except ImportError:
+#    print('This is not an error. If you want to use MONeT checkpointing, please install MONeT (https://github.com/utsaslab/MONeT) and update pytorch to 1.5.1')
+
 def weights_init(init_type='gaussian'):
     def init_fun(m):
         classname = m.__class__.__name__
