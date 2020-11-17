@@ -147,7 +147,7 @@ class AD_Trainer(nn.Module):
             count = torch.FloatTensor(self.num_classes).zero_().cuda()
             often = torch.FloatTensor(self.num_classes).zero_().cuda()
             often += 1
-            print(labels.shape)
+            #print(labels.shape)
             n, h, w = labels.shape
             for i in range(self.num_classes):
                 count[i] = torch.sum(labels==i)

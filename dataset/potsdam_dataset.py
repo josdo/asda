@@ -63,7 +63,7 @@ class Potsdam(data.Dataset):
         target = (np.around(target / 255) * 255).astype(np.uint8)  # round colors
         enc = np.zeros(target.shape[:2])
         for potsdam_class in cls.classes:
-            label = potsdam_class.id
+            label = 255 if potsdam_class.ignore_in_eval else potsdam_class.id
             color = np.asarray(potsdam_class.color)
             enc += (target == color).all(axis=2) * label
         #for i, row in enumerate(target):

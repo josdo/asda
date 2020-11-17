@@ -289,8 +289,17 @@ def main():
 
             # train with source
 
-            _, batch = trainloader_iter.__next__()
-            _, batch_t = targetloader_iter.__next__()
+            try:
+                _, batch = trainloader_iter.__next__()
+            except StopIteration:  # reloop through data
+                trainloader_iter = iter(trainloader)
+                _, batch = trainloader_iter.__next__()
+            
+            try:
+                _, batch_t = targetloader_iter.__next__()
+            except StopIteration:
+                targetloader_iter = iter(targetloader_iter)
+                _, batch_t = targetloader_iter.__next__()
 
             images, labels, _, _ = batch
             images = images.float().cuda() # images.cuda()

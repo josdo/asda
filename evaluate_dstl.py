@@ -161,18 +161,17 @@ def main():
     testloader = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(512, 1024), resize_size=(1024, 512), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
                                     batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
 
-    #scale = 1.25
+    scale = 1.25
     testloader2 = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(round(512*scale), round(1024*scale) ), resize_size=( round(1024*scale), round(512*scale)), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
                                     batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
     #scale = 0.9
     #testloader3 = data.DataLoader(Dstl(args.data_dir, args.data_list), #crop_size=(round(512*scale), round(1024*scale) ), resize_size=( round(1024*scale), round(512*scale)), mean=IMG_MEAN, scale=False, mirror=False, set=args.set),
     #                                batch_size=batchsize, shuffle=False, pin_memory=True, num_workers=4)
 
-    # TODO remove this cropping thing
     if version.parse(torch.__version__) >= version.parse('0.4.0'):
-        interp = nn.Upsample(size=(1024, 2048), mode='bilinear', align_corners=True)
+        interp = nn.Upsample(size=(1000, 1000), mode='bilinear', align_corners=True)
     else:
-        interp = nn.Upsample(size=(1024, 2048), mode='bilinear')
+        interp = nn.Upsample(size=(1000, 1000), mode='bilinear')
 
     sm = torch.nn.Softmax(dim = 1)
     log_sm = torch.nn.LogSoftmax(dim = 1)
