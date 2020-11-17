@@ -256,4 +256,4 @@ if __name__ == '__main__':
     with torch.no_grad():
         save_path = main()
     print('Time used: {} sec'.format(time.time()-tt))
-    os.system('python compute_iou.py ./data/dstl/ %s'%save_path)
+    os.system('python compute_iou_potsdam.py ./data/dstl/ %s'%save_path)
