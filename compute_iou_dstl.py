@@ -77,6 +77,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('gt_dir', type=str, help='directory which stores Dstl val gt images')
     parser.add_argument('pred_dir', type=str, help='directory which stores Dstl val pred images')
-    parser.add_argument('--devkit_dir', default='dataset/dstl_list', help='base directory of Dstl')
+    parser.add_argument('--devkit_dir', default='./dataset/dstl_list', help='base directory of Dstl')
     args = parser.parse_args()
     main(args)
