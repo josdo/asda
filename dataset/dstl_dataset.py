@@ -84,7 +84,9 @@ class Dstl(data.Dataset):
 
     @classmethod
     def decode_target(cls, target):
-        dec = cls.id_to_color[target]
+        label_copy = target.copy()
+        label_copy[target == 255] = 0
+        dec = cls.id_to_color[label_copy]
         return dec
 
     def __getitem__(self, index):

@@ -23,7 +23,7 @@ class Potsdam(data.Dataset):
 
     PotsdamClass = namedtuple('PotsdamClass', ['name', 'id', 'ignore_in_eval', 'color'])
     classes = [
-        PotsdamClass('background',    0, True, (255, 0, 0)),      # red
+        PotsdamClass('background',    0, True,  (255, 0, 0)),     # red
         PotsdamClass('building',      1, False, (0, 0, 255)),     # blue
         PotsdamClass('pavement',      2, False, (255, 255, 255)), # white
         PotsdamClass('vegetation',    3, False, (0, 255, 255)),   # turqoise
@@ -80,7 +80,9 @@ class Potsdam(data.Dataset):
 
     @classmethod
     def decode_target(cls, target):
-        dec = cls.id_to_color[target]
+        label_copy = target.copy()
+        label_copy[target == 255] = 0
+        dec = cls.id_to_color[label_copy]
         return dec
 
     def __getitem__(self, index):

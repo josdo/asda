@@ -288,17 +288,17 @@ def main():
             # train G
 
             # train with source
-
+            
             try:
                 _, batch = trainloader_iter.__next__()
             except StopIteration:  # reloop through data
-                trainloader_iter = iter(trainloader)
+                trainloader_iter = enumerate(trainloader)
                 _, batch = trainloader_iter.__next__()
             
             try:
                 _, batch_t = targetloader_iter.__next__()
             except StopIteration:
-                targetloader_iter = iter(targetloader_iter)
+                targetloader_iter = enumerate(targetloader)
                 _, batch_t = targetloader_iter.__next__()
 
             images, labels, _, _ = batch
