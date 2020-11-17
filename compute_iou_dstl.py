@@ -41,11 +41,11 @@ def compute_mIoU(gt_dir, pred_dir, devkit_dir=''):
     hist = np.zeros((num_classes, num_classes))
 
     image_path_list = join(devkit_dir, 'val.txt')
-    label_path_list = join(devkit_dir, 'label.txt')
-    gt_imgs = open(label_path_list, 'r').read().splitlines()
-    gt_imgs = [join(gt_dir, x, '.png') for x in gt_imgs]
+    #label_path_list = join(devkit_dir, 'label.txt')
+    gt_imgs = open(image_path_list, 'r').read().splitlines()
+    gt_imgs = [join(gt_dir, x, '.npy') for x in gt_imgs]
     pred_imgs = open(image_path_list, 'r').read().splitlines()
-    pred_imgs = [join(pred_dir, x.split('/')[-1], '.npy') for x in pred_imgs]
+    pred_imgs = [join(pred_dir, x.split('/')[-1], '.png') for x in pred_imgs]
 
     for ind in range(len(gt_imgs)):
         pred = Dstl.decode_target(np.asarray(Image.open(pred_imgs[ind])))
@@ -77,6 +77,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('gt_dir', type=str, help='directory which stores Dstl val gt images')
     parser.add_argument('pred_dir', type=str, help='directory which stores Dstl val pred images')
-    parser.add_argument('--devkit_dir', default='./dataset/dstl_list', help='base directory of Dstl')
+    parser.add_argument('--devkit_dir', default='./data/dstl_list/', help='base directory of Dstl')
     args = parser.parse_args()
     main(args)
