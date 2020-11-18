@@ -43,16 +43,23 @@ def compute_mIoU(gt_dir, pred_dir, devkit_dir=''):
     image_path_list = join(devkit_dir, 'val.txt')
     #label_path_list = join(devkit_dir, 'label.txt')
     gt_imgs = open(image_path_list, 'r').read().splitlines()
-    gt_imgs = [join(gt_dir, x, '.npy') for x in gt_imgs]
+    gt_imgs = [join(gt_dir, 'masks', x + '.npy') for x in gt_imgs]
     pred_imgs = open(image_path_list, 'r').read().splitlines()
-    pred_imgs = [join(pred_dir, x.split('/')[-1], '.png') for x in pred_imgs]
+    pred_imgs = [join(pred_dir, x.split('/')[-1] + '.png') for x in pred_imgs]
 
     for ind in range(len(gt_imgs)):
-        pred = Dstl.decode_target(np.asarray(Image.open(pred_imgs[ind])))
-        label = Dstl.decode_target(np.load(gt_imgs[ind]))
+        pred = np.asarray(Image.open(pred_imgs[ind]))
+        pred = np.zeros(pred.shape) + (pred != 255) * pred
+        pred = np.asarray(pred, dtype=np.int64)
+        label = np.load(gt_imgs[ind])
+        label = np.zeros(label.shape) + (label != 255) * pred
+        label = np.asarray(label, dtype=np.int64)
+
         #pred = np.array(Image.open(pred_imgs[ind]))
         #label = np.array(Image.open(gt_imgs[ind]))
         #label = label_mapping(label, mapping)
+        #print(pred)
+        #print(label)
         if len(label.shape) == 3 and label.shape[2]==4:
             label = label[:,:,0]
         if len(label.flatten()) != len(pred.flatten()):
@@ -77,6 +84,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('gt_dir', type=str, help='directory which stores Dstl val gt images')
     parser.add_argument('pred_dir', type=str, help='directory which stores Dstl val pred images')
-    parser.add_argument('--devkit_dir', default='./data/dstl_list/', help='base directory of Dstl')
+    parser.add_argument('--devkit_dir', default='./dataset/dstl_list/', help='base directory of Dstl')
     args = parser.parse_args()
     main(args)
