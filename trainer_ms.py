@@ -218,15 +218,15 @@ class AD_Trainer(nn.Module):
             loss += self.lambda_adv_target1 * loss_adv_target1 + self.lambda_adv_target2 * loss_adv_target2
 
 
-            #if i_iter < 15000: # turn on memreg
-            #    self.lambda_kl_target_copy = 0
-            #    self.lambda_me_target_copy = 0
-            #else:
-            #    self.lambda_kl_target_copy = self.lambda_kl_target
-            #    self.lambda_me_target_copy = self.lambda_me_target
+            if i_iter < 15000: # turn on memreg
+                self.lambda_kl_target_copy = 0
+                self.lambda_me_target_copy = 0
+            else:
+                self.lambda_kl_target_copy = self.lambda_kl_target
+                self.lambda_me_target_copy = self.lambda_me_target
             
-            self.lambda_kl_target_copy = self.lambda_kl_target
-            self.lambda_me_target_copy = self.lambda_me_target
+            #self.lambda_kl_target_copy = self.lambda_kl_target
+            #self.lambda_me_target_copy = self.lambda_me_target
 
             loss_me = 0.0
             if self.lambda_me_target_copy>0:
