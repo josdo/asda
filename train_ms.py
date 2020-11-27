@@ -224,13 +224,6 @@ def main():
     if args.verbose_model_loading:
         print(Trainer)
 
-#     trainloader = data.DataLoader(
-#         GTA5DataSet(args.data_dir, args.data_list, max_iters=args.num_steps * args.iter_size * args.batch_size,
-#                     resize_size=args.input_size,
-#                     crop_size=args.crop_size,
-#                     scale=True, mirror=True, mean=IMG_MEAN, autoaug = args.autoaug),
-#         batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
-    
     trainloader = data.DataLoader(
         Potsdam(args.data_dir, args.data_list, 
 #                 max_iters=args.num_steps * args.iter_size * args.batch_size,
@@ -243,14 +236,6 @@ def main():
 
     trainloader_iter = enumerate(trainloader)
 
-#     targetloader = data.DataLoader(cityscapesDataSet(args.data_dir_target, args.data_list_target,
-#                                                      max_iters=args.num_steps * args.iter_size * args.batch_size,
-#                                                      resize_size=args.input_size_target,
-#                                                      crop_size=args.crop_size,
-#                                                      scale=False, mirror=args.random_mirror, mean=IMG_MEAN,
-#                                                      set=args.set, autoaug = args.autoaug_target),
-#                                    batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
-#                                    pin_memory=True, drop_last=True)
     targetloader = data.DataLoader(
         Dstl(args.data_dir_target, args.data_list_target),
         batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, 
