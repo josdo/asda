@@ -71,7 +71,7 @@ def get_arguments():
     parser.add_argument("--model", type=str, default=MODEL,
                         help="Model Choice (DeeplabMulti/DeeplabVGG/Oracle).")
     parser.add_argument("--data-dir", type=str, default=DATA_DIRECTORY,
-                        help="Path to the directory containing the Cityscapes dataset.")
+                        help="Path to the directory containing the Dstl dataset.")
     parser.add_argument("--data-list", type=str, default=DATA_LIST_PATH,
                         help="Path to the file listing the images in the dataset.")
     parser.add_argument("--ignore-label", type=int, default=IGNORE_LABEL,
@@ -84,8 +84,8 @@ def get_arguments():
                         help="choose gpu device.")
     parser.add_argument("--batchsize", type=int, default=12,
                         help="choose gpu device.")
-    parser.add_argument("--set", type=str, default=SET,
-                        help="choose evaluation set.")
+#     parser.add_argument("--set", type=str, default=SET,
+#                         help="choose evaluation set.")
     parser.add_argument("--save", type=str, default=SAVE_PATH,
                         help="Path to save result.")
     return parser.parse_args()
@@ -175,7 +175,7 @@ def main():
                 output1, output2 = model(inputs)
                 output_batch = interp(sm(0.5* output1 + output2))
 
-                heatmap_batch = torch.sum(kl_distance(log_sm(output1), sm(output2)), dim=1)
+#                 heatmap_batch = torch.sum(kl_distance(log_sm(output1), sm(output2)), dim=1)
 
                 output1, output2 = model(fliplr(inputs))
                 output1, output2 = fliplr(output1), fliplr(output2)
@@ -189,7 +189,7 @@ def main():
                 output_batch += interp(sm(0.5 * output1 + output2))
                 del output1, output2, inputs2
                 output_batch = output_batch.cpu().data.numpy()
-                heatmap_batch = heatmap_batch.cpu().data.numpy()
+#                 heatmap_batch = heatmap_batch.cpu().data.numpy()
         elif args.model == 'DeeplabVGG' or args.model == 'Oracle':
             output_batch = model(Variable(image).cuda())
             output_batch = interp(output_batch).cpu().data.numpy()
@@ -204,10 +204,10 @@ def main():
             output = output_batch[i,:,:]
             output_col = colorize_mask(output)
             output = Image.fromarray(output)
-
-            name_tmp = name[i].split('/')[-1]
-            dir_name = name[i].split('/')[-2]
-            save_path = args.save + '/' + dir_name
+            
+            name_tmp = name[i] + ".jpg" # name[i].split('/')[-1]
+#             dir_name = name[i].split('/')[-2]
+            save_path = args.save # + '/' # + dir_name
             #save_path = re.replace(save_path, 'leftImg8bit', 'pseudo')
             #print(save_path)
             if not os.path.isdir(save_path):
@@ -215,13 +215,16 @@ def main():
             output.save('%s/%s' % (save_path, name_tmp))
             print('%s/%s' % (save_path, name_tmp))
             output_col.save('%s/%s_color.png' % (save_path, name_tmp.split('.')[0]))
+            
+            output.close()
+            output_col.close()
 
-            heatmap_tmp = heatmap_batch[i,:,:]/np.max(heatmap_batch[i,:,:])
-            fig = plt.figure()
-            plt.axis('off')
-            heatmap = plt.imshow(heatmap_tmp, cmap='viridis')
-            fig.colorbar(heatmap)
-            fig.savefig('%s/%s_heatmap.png' % (save_path, name_tmp.split('.')[0]))
+#             heatmap_tmp = heatmap_batch[i,:,:]/np.max(heatmap_batch[i,:,:])
+#             fig = plt.figure()
+#             plt.axis('off')
+#             heatmap = plt.imshow(heatmap_tmp, cmap='viridis')
+#             fig.colorbar(heatmap)
+#             fig.savefig('%s/%s_heatmap.png' % (save_path, name_tmp.split('.')[0]))
             
     return args.save
 
