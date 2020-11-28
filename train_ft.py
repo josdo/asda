@@ -20,8 +20,9 @@ from tensorboardX import SummaryWriter
 from trainer_ms_variance import AD_Trainer
 from utils.loss import CrossEntropy2d
 from utils.tool import adjust_learning_rate, adjust_learning_rate_D, Timer 
-from dataset.cityscapes_dataset import cityscapesDataSet
-from dataset.cityscapes_pseudo_dataset import cityscapes_pseudo_DataSet
+from dataset.dstl_dataset import Dstl
+# from dataset.cityscapes_dataset import cityscapesDataSet
+# from dataset.cityscapes_pseudo_dataset import cityscapes_pseudo_DataSet
 
 IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
 
@@ -222,26 +223,36 @@ def main():
 
     print(Trainer)
 
+#     trainloader = data.DataLoader(
+#         cityscapes_pseudo_DataSet(args.data_dir, args.data_list, max_iters=args.num_steps * args.iter_size * args.batch_size,
+#                     resize_size=args.input_size,
+#                     crop_size=args.crop_size,
+#                     scale=True, mirror=True, mean=IMG_MEAN, 
+#                     set='train', autoaug = args.autoaug, threshold = args.threshold),
+#         batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
     trainloader = data.DataLoader(
-        cityscapes_pseudo_DataSet(args.data_dir, args.data_list, max_iters=args.num_steps * args.iter_size * args.batch_size,
-                    resize_size=args.input_size,
-                    crop_size=args.crop_size,
-                    scale=True, mirror=True, mean=IMG_MEAN, 
-                    set='train', autoaug = args.autoaug, threshold = args.threshold),
-        batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+        Dstl(args.data_dir, args.data_list),
+        batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, 
+        pin_memory=True, drop_last=True)
+
 
     trainloader_iter = enumerate(trainloader)
+    
 
-    targetloader = data.DataLoader(cityscapesDataSet(args.data_dir_target, args.data_list_target,
-                                                     max_iters=args.num_steps * args.iter_size * args.batch_size,
-                                                     resize_size=args.input_size_target,
-                                                     crop_size=args.crop_size,
-                                                     scale=False, mirror=args.random_mirror, mean=IMG_MEAN,
-                                                     set=args.set, autoaug = args.autoaug_target),
-                                   batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
-                                   pin_memory=True, drop_last=True)
+#     targetloader = data.DataLoader(cityscapesDataSet(args.data_dir_target, args.data_list_target,
+#                                                      max_iters=args.num_steps * args.iter_size * args.batch_size,
+#                                                      resize_size=args.input_size_target,
+#                                                      crop_size=args.crop_size,
+#                                                      scale=False, mirror=args.random_mirror, mean=IMG_MEAN,
+#                                                      set=args.set, autoaug = args.autoaug_target),
+#                                    batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
+#                                    pin_memory=True, drop_last=True)
 
-
+    targetloader = data.DataLoader(
+        Dstl(args.data_dir_target, args.data_list_target),
+        batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, 
+        pin_memory=True, drop_last=True)
+    
     targetloader_iter = enumerate(targetloader)
 
     # set up tensor board
@@ -277,11 +288,11 @@ def main():
             _, batch_t = targetloader_iter.__next__()
 
             images, labels, _, _ = batch
-            images = images.cuda()
-            labels = labels.long().cuda()
+            images = images.float().cuda() # images.cuda()
+            labels = labels.long().cuda() # labels.double().cuda()
             images_t, labels_t, _, _ = batch_t
-            images_t = images_t.cuda()
-            labels_t = labels_t.long().cuda()
+            images_t = images_t.float().cuda() # images.cuda()
+            labels_t = labels_t.long().cuda() # labels_t.double().cuda()
 
             with Timer("Elapsed time in update: %f"):
                 loss_seg1, loss_seg2, loss_adv_target1, loss_adv_target2, loss_me, loss_kl, pred1, pred2, pred_target1, pred_target2, val_loss = Trainer.gen_update(images, images_t, labels, labels_t, i_iter)
@@ -314,7 +325,7 @@ def main():
                 'val_loss': val_loss,
             }
 
-            if i_iter % 100 == 0:
+            if i_iter % 10 == 0: # 100
                 for key, val in scalar_info.items():
                     writer.add_scalar(key, val, i_iter)
 
@@ -327,16 +338,16 @@ def main():
 
         if i_iter >= args.num_steps_stop - 1:
             print('save model ...')
-            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '.pth'))
-            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D1.pth'))
-            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(args.num_steps_stop) + '_D2.pth'))
+            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'dstl_pseudo_' + str(args.num_steps_stop) + '.pth'))
+            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'dstl_pseudo_' + str(args.num_steps_stop) + '_D1.pth'))
+            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'dstl_pseudo_' + str(args.num_steps_stop) + '_D2.pth'))
             break
 
         if i_iter % args.save_pred_every == 0 and i_iter != 0:
             print('taking snapshot ...')
-            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '.pth'))
-            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D1.pth'))
-            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'GTA5_' + str(i_iter) + '_D2.pth'))
+            torch.save(Trainer.G.state_dict(), osp.join(args.snapshot_dir, 'dstl_pseudo_' + str(i_iter) + '.pth'))
+            torch.save(Trainer.D1.state_dict(), osp.join(args.snapshot_dir, 'dstl_pseudo_' + str(i_iter) + '_D1.pth'))
+            torch.save(Trainer.D2.state_dict(), osp.join(args.snapshot_dir, 'dstl_pseudo_' + str(i_iter) + '_D2.pth'))
 
     if args.tensorboard:
         writer.close()
